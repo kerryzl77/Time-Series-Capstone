@@ -32,7 +32,10 @@ if __name__ == '__main__':
     parser.add_argument('--data', type=str, required=True, default='ETTm1', help='dataset type')
     parser.add_argument('--data_version', type=str, required=True, default='v2',
                         help='Dataset version. Specific to Green_Energy.')
-    parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file')
+    # Change
+    # parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file')
+    parser.add_argument('--root_path', type=str, default='/content/drive/MyDrive/Capstone 2024-25/dataset/m5', help='root path of the data file')
+
     parser.add_argument('--data_path', type=str, default='ETTh1.csv', help='data file')
     parser.add_argument('--target', type=str, default='OT', help='target feature in S or MS task')
     parser.add_argument('--freq', type=str, default='h',
@@ -143,7 +146,7 @@ if __name__ == '__main__':
 
             if args.track:
                 wandb_tags = []
-                wandb.init(entity="zhykoties",
+                wandb.init(entity="zikailiu-university-of-california-berkeley",
                            project="capstone",  # TODO: change to your project name
                            name=setting,
                            sync_tensorboard=True,
