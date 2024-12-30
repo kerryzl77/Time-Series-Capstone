@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.container import ModuleList
 
-
 class DeepAR(nn.Module):
     """
+    DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks
     Paper link: https://arxiv.org/abs/1704.04110
     """
 
@@ -24,18 +24,152 @@ class DeepAR(nn.Module):
         self.c_out = self.tgt_num
         self.use_norm = configs.use_norm
         self.output_attention = configs.output_attention
+        self.device = device
 
+        self.hidden_size = 128
+        self.num_layers = 2
+
+        # Time covariates size based on frequency
         freq_to_time_cov = {
-            'daily': 2
+            'daily': 2,
+            'h': 1,
         }
-        self.time_cov_size = freq_to_time_cov[configs.freq]
+        # self.time_cov_size = freq_to_time_cov[configs.freq]
+        self.time_cov_size = configs.time_cov_size
 
-        # Embedding
+        # Embedding layers
+        self.time_embed_map = ModuleList([
+            nn.Embedding(configs.time_num_class[i], configs.time_cat_embed[i])
+            for i in range(self.time_cat)
+        ])
+        self.meta_embed_map = ModuleList([
+            nn.Embedding(configs.meta_num_class[i], configs.meta_cat_embed[i])
+            for i in range(self.meta_cat)
+        ])
+
+        # Calculate input size for LSTM - with debugging
+        time_feat_size = self.time_num + sum(configs.time_cat_embed)
+        meta_feat_size = self.meta_num + sum(configs.meta_cat_embed)
+        
+        # print(f"Target size (prev_y): {self.tgt_num}")
+        # print(f"Time features size: {time_feat_size}")
+        # print(f"Time covariates size: {self.time_cov_size}")
+        # print(f"Meta features size: {meta_feat_size}")
+        
+        self.input_size = (
+            self.tgt_num  # previous target values
+            + time_feat_size  # time features
+            + self.time_cov_size  # time covariates
+            + meta_feat_size  # meta features
+        )
+        # print(f"Total input size calculated: {self.input_size}")
+
         # Encoder
+        self.lstm = nn.LSTM(
+            input_size=self.input_size,
+            hidden_size=self.hidden_size,
+            num_layers=self.num_layers,
+            dropout=configs.dropout,
+            batch_first=True
+        )
+        
         # Decoder
+        self.mean_layer = nn.Linear(self.hidden_size, self.c_out)
 
-    def forecast(self, x_enc, x_mark_enc, x_dec, x_mark_dec):
-        raise NotImplementedError
+    def _get_embeddings(self, given_enc, meta_x):
+        """Helper function to compute embeddings for categorical features"""
+        b_sz = given_enc.size(0)
+        
+        # Embed time categorical features
+        given_enc_cat_list = [
+            self.time_embed_map[i](given_enc[:, :, -self.time_cat + i].long())
+            for i in range(self.time_cat)
+        ]
+        given_enc_embed = torch.cat(
+            [given_enc[:, :, :-self.time_cat]] + given_enc_cat_list, 
+            dim=-1
+        )
+        
+        # Embed meta categorical features
+        if meta_x is not None:
+            meta_x_cat_list = [
+                self.meta_embed_map[i](meta_x[:, -self.meta_cat + i].long())
+                for i in range(self.meta_cat)
+            ]
+            meta_x_embed = torch.cat(
+                [meta_x[:, :-self.meta_cat]] + meta_x_cat_list,
+                dim=-1
+            )
+        else:
+            meta_x_embed = torch.zeros(b_sz, self.meta_num + sum(configs.meta_cat_embed)).to(self.device)
+            
+        return given_enc_embed, meta_x_embed
+
+    def forecast(self, given_enc, x_enc, x_mark_enc, meta_x, output_attention=False):
+        batch_size = x_enc.size(0)
+        
+        # Initialize hidden states
+        h = torch.zeros((self.num_layers, batch_size, self.hidden_size)).to(self.device)
+        c = torch.zeros((self.num_layers, batch_size, self.hidden_size)).to(self.device)
+        hidden = (h, c)
+
+        # Get embeddings
+        given_enc_embed, meta_x_embed = self._get_embeddings(given_enc, meta_x)
+        
+        # Window-wise normalization if configured
+        if self.use_norm:
+            means = x_enc.mean(1, keepdim=True).detach()
+            x_enc = x_enc - means
+            stdev = torch.sqrt(torch.var(x_enc, dim=1, keepdim=True, unbiased=False) + 1e-5)
+            x_enc = x_enc / stdev
+
+        means = []
+        prev_y = x_enc[:, 0, :]  # Initialize with first value
+
+        for t in range(self.window_size):
+            # Update previous target value
+            if t > 0:
+                prev_y = x_enc[:, t-1, :] if t < self.seq_len else means[-1]
+
+            # Get time features and covariates for current step
+            time_feat = given_enc_embed[:, t, :]
+            time_cov = x_mark_enc[:, t, :]
+
+            # # Debug dimension sizes
+            # print(f"prev_y size: {prev_y.size()}")
+            # print(f"time_feat size: {time_feat.size()}")
+            # print(f"time_cov size: {time_cov.size()}")
+            # print(f"meta_x_embed size: {meta_x_embed.size()}")
+            # print(f"Expected input_size: {self.input_size}")
+            
+            # Concatenate all features
+            inp_t = torch.cat([
+                prev_y,
+                time_feat,
+                time_cov,
+                meta_x_embed
+            ], dim=-1)
+            
+            # Add sequence dimension
+            inp_t = inp_t.unsqueeze(1)
+            
+            # LSTM step
+            out, hidden = self.lstm(inp_t, hidden)
+            
+            # Project to target dimension
+            mean_t = self.mean_layer(out.squeeze(1))
+            means.append(mean_t)
+
+        # Stack all predictions
+        outputs = torch.stack(means, dim=1)
+        
+        # Denormalize if needed
+        if self.use_norm:
+            outputs = outputs * stdev + means
+
+        if output_attention:
+            return outputs, None
+        return outputs
 
     def set_train_mode(self):
         self.is_train = True
