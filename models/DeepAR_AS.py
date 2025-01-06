@@ -3,14 +3,14 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.modules.container import ModuleList
 
-class DeepAR(nn.Module):
+class DeepAR_AS(nn.Module):
     """
     DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks
     Paper link: https://arxiv.org/abs/1704.04110
     """
 
     def __init__(self, configs, device):
-        super(DeepAR, self).__init__()
+        super(DeepAR_AS, self).__init__()
         self.is_train = True
         self.task_name = configs.task_name
         self.seq_len = configs.seq_len

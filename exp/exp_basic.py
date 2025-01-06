@@ -16,7 +16,7 @@ class Exp_Basic(object):
         self.model_dict = {
             'Linear': Linear,
             'DeepAR': DeepAR,
-            'DeepAR_Ancestral_Sampling': DeepAR_AS,
+            'DeepAR_AS': DeepAR_AS,
             'Enc_Only_Transformer': Enc_Only_Transformer,
             'Enc_Dec_Transformer': Enc_Dec_Transformer
         }
