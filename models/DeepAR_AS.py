@@ -24,6 +24,7 @@ class DeepAR_AS(nn.Module):
         self.hidden_size = 128
         self.num_layers = 2
         self.time_cov_size = configs.time_cov_size
+        self.num_samples = 100
 
         # Embedding layers
         self.time_embed_map = ModuleList([
@@ -162,8 +163,6 @@ class DeepAR_AS(nn.Module):
         
         if self.task_name == 'forecast':
             if self.is_train:
-                # Store sigmas as model attribute for loss computation
-                self.current_sigmas = sigmas
                 # Return both means and sigmas together as a single tensor
                 # Shape: [batch_size, seq_len, 2 * c_out]
                 return torch.cat([means, sigmas], dim=-1)
@@ -173,10 +172,11 @@ class DeepAR_AS(nn.Module):
                     means[:, -self.pred_len:, :],
                     sigmas[:, -self.pred_len:, :]
                 )
-                samples = distribution.sample()
+                samples = distribution.sample((self.num_samples,))  # Shape: [num_samples, B, pred_len, c_out]
+                samples_mean = samples.mean(dim=0)  # Shape: [B, pred_len, c_out]
                 if output_attention:
-                    return samples, None
-                return samples
+                    return samples_mean, None
+                return samples_mean
         else:
             raise ValueError(f'Unknown task_name: {self.task_name}')
 
