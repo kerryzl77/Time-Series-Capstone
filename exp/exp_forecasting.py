@@ -57,8 +57,18 @@ class Exp_Forecast(Exp_Basic):
         model_optim = optim.AdamW(optimizer_grouped_parameters, lr=self.args.learning_rate)
         return model_optim
 
+    # def _select_criterion(self):
+    #     self.criterion = nn.MSELoss()
     def _select_criterion(self):
-        self.criterion = nn.MSELoss()
+      """
+      Select the appropriate criterion based on model type
+      """
+      if self.args.model == 'DeepAR_AS':
+          # For DeepAR_AS, use the model's gaussian_nll_loss
+          self.criterion = self.model.gaussian_nll_loss
+      else:
+          # For other models, use MSE loss
+          self.criterion = nn.MSELoss()
 
     def vali(self, vali_data, vali_loader, global_step):
         self.init_model(vali_data)
