@@ -134,7 +134,7 @@ class DeepAR(nn.Module):
               if t < self.seq_len:
                 prev_y = x_enc[:, t-1, :]
               else:
-                prev_y = batch_y[:, t-self.seq_len-1, :]  # Shifted by one timestep
+                prev_y = batch_y[:, t-self.seq_len, :]  # Shifted by one timestep
 
             # Get time features and covariates for current step
             time_feat = given_enc_embed[:, t, :]
