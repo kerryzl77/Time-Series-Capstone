@@ -4,6 +4,7 @@ import torch.nn.functional as F
 from torch.nn.modules.container import ModuleList
 
 class DeepAR(nn.Module):
+    # Need to work with the modified exp_forecasting_TF.py
     """
     DeepAR: Probabilistic Forecasting with Autoregressive Recurrent Networks
     Paper link: https://arxiv.org/abs/1704.04110
