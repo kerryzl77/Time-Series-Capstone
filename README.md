@@ -1,5 +1,4 @@
 # UC Berkeley MEng Capstone Project - Time Series
-Advisor: Yunkai Zhang, yunkai_zhang@berkeley.edu.
 This repository applies time series models to the [M5 dataset](https://www.kaggle.com/competitions/m5-forecasting-accuracy).
 
 ## Run Instructions
