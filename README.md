@@ -32,8 +32,8 @@ the target values in the forecast range.
 are the meta variables, the given variables, the target variables, and the time covariates.
 The encoder only takes in values in the context range. We take the output embeddings from the encoder,
 flatten them, and feed them into a linear layer to predict the target values in the forecast range.
-- **DeepAR (TODO):** Predict one step ahead each time, and feed back into the LSTM to predict the next step.
-- **Enc_Dec_Transformer (TODO):** We treat the variables at each time step as one token,
+- **DeepAR:** Predict one step ahead each time, and feed back into the LSTM to predict the next step.
+- **Enc_Dec_Transformer:** We treat the variables at each time step as one token,
 similarly as the Enc_Only_Transformer. The encoder takes in values in the context range, and the decoder
 takes in the values in the forecast range, except that for the target variables (which we don't have access to 
 in the forecast range), for which we pad with zeros. Instead of flattening, we apply a linear layer 
