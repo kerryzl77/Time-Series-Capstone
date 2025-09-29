@@ -1,5 +1,5 @@
 # UC Berkeley MEng Capstone Project - Time Series
-This repository applies time series models to the [M5 dataset](https://www.kaggle.com/competitions/m5-forecasting-accuracy).
+Advisor: [Yunkai Zhang](yunkai_zhang@berkeley.edu). This repository applies time series models to the [M5 dataset](https://www.kaggle.com/competitions/m5-forecasting-accuracy).
 
 ## Run Instructions
 0. Install the required packages using Python 3.9.6.
